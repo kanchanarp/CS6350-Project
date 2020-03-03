@@ -14,10 +14,11 @@ class DistanceMetric:
     
     def calc_landmarkdst(self,Q,trajectory):
         D = []
+        lines = trajectory.get_lines()
         for q in Q:
             min_dpt = None
             min_d = float('inf')
-            for l in trajectory.get_lines():
+            for l in lines:
                 (d,pt) = l.get_dist(q)  
                 if(min_d>d):
                     min_d = d
@@ -35,6 +36,8 @@ class DistanceMetric:
         dist_Q = math.sqrt((1.0/n)*dist_Q)
         dist_Qpi = 0
         for i in range(n):
+            #print(D_a[i][1])
+            #print(D_b[i][1])
             dist_Qpi = dist_Qpi + np.linalg.norm(D_a[i][1]-D_b[i][1])
         dist_Qpi = (1.0/n)*dist_Qpi
         return (dist_Q,dist_Qpi)

@@ -17,10 +17,16 @@ class Line:
         
     def set_st(self, st):
         self.st = st
-        
-    def set_u(self, en):
+            
+    def set_en(self, en):
         self.en = en
         
+    def get_st(self):
+        return self.st
+    
+    def get_en(self):
+        return self.en
+    
     def get_dist(self,q):
         t = (1.0/np.linalg.norm(self.en-self.st)**2)*np.dot(q-self.st,self.en-self.st)
         t = min(max(t,0),1)
