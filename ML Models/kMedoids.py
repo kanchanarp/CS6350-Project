@@ -39,7 +39,7 @@ def calclateCost(Q,trajectories,centers):
         cnt  = None
         min_d = float('inf')
         for c in centers:
-            d = metric.calc_trajectorydst(Q,t,c)[1]
+            d = metric.calc_trajectorydst(Q,t,c)[0]
             if(d<min_d):
                 min_d = d
                 cnt = c

@@ -41,3 +41,23 @@ class DistanceMetric:
             dist_Qpi = dist_Qpi + np.linalg.norm(D_a[i][1]-D_b[i][1])
         dist_Qpi = (1.0/n)*dist_Qpi
         return (dist_Q,dist_Qpi)
+    
+    def calc_euclideandst(self,traj_a,traj_b):
+        lines_a = traj_a.get_lines()
+        lines_b = traj_b.get_lines()
+        l = min(len(lines_a),len(lines_b))
+        ed = 0
+        for i in range(l):
+            diff = lines_a[i].get_st()-lines_b[i].get_st()
+            ed = ed + (1.0/l)*math.sqrt(np.dot(diff,np.transpose(diff)))
+        return ed
+    
+    def calc_frechetdst(self,traj_a,traj_b):
+        lines_a = traj_a.get_lines()
+        lines_b = traj_b.get_lines()
+        l = min(len(lines_a),len(lines_b))
+        ed = 0
+        for i in range(l):
+            diff = lines_a[i].get_st()-lines_b[i].get_st()
+            ed = ed + (1.0/l)*math.sqrt(np.dot(diff,np.transpose(diff)))
+        return ed
