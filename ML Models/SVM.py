@@ -60,6 +60,7 @@ def getDist(Q,trajectories,method = 'paper1'):
     return D
 
 def main():
+    random.seed(0)
     files = ['000','001']
     traj_lst = {'000':[] , '001':[]}
     for name in files:
@@ -83,8 +84,8 @@ def main():
     Q = []
     N = 10
     while(len(Q)<N):
-        x = random.randrange(436000,467300)
-        y = random.randrange(4405000,4410000)
+        x = random.randrange(437030,467040)
+        y = random.randrange(4416500,4436700)
         p = [x,y]
         if(not(p in Q)):
             Q.append(p)
@@ -106,7 +107,7 @@ def main():
         #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
         Y = [0 for i in range(M)]+[1 for i in range(M)]
-        D = np.array(getDist(Q,all_traj,method = 'paper1'))
+        D = np.array(getDist(Q,all_traj,method = 'euclid'))
         clf = svm.SVC(kernel = 'precomputed')
         clf.fit(D,Y)
         #pred = clf.predict(D)
@@ -117,7 +118,7 @@ def main():
             all_traj.append(traj_lst['000'][i])
         for i in idx:
             all_traj.append(traj_lst['001'][i])
-        D = np.array(getDist(Q,all_traj,method = 'paper2'))
+        D = np.array(getDist(Q,all_traj,method = 'euclid'))
         pred = clf.predict(D)
         err = calcError(Y,pred)
         print(err)

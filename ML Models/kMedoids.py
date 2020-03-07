@@ -39,7 +39,7 @@ def calclateCost(Q,trajectories,centers):
         cnt  = None
         min_d = float('inf')
         for c in centers:
-            d = metric.calc_trajectorydst(Q,t,c)[0]
+            d = metric.calc_euclideandst(t,c)
             if(d<min_d):
                 min_d = d
                 cnt = c
@@ -115,6 +115,7 @@ def printDist(Q,trajectories):
                     print("Traj: %d, %d"%(i,j))
 
 def main():
+    random.seed(0)
     files = ['000','001']
     traj_lst = {'000':[] , '001':[]}
     for name in files:
@@ -138,8 +139,8 @@ def main():
     Q = []
     N = 10
     while(len(Q)<N):
-        x = random.randrange(436000,467300)
-        y = random.randrange(4405000,4410000)
+        x = random.randrange(437030,467040)
+        y = random.randrange(4416500,4436700)
         p = [x,y]
         if(not(p in Q)):
             Q.append(p)
