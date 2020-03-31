@@ -47,9 +47,9 @@ def getDist(Q,trajectories,method = 'paper1'):
         for j in range(N):
             if(i!=j):
                 if(method=='paper1'):
-                    d = metric.calc_trajectorydst(Q,trajectories[i],trajectories[j])[1]
+                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[1]
                 if(method=='paper2'):
-                    d = metric.calc_trajectorydst(Q,trajectories[i],trajectories[j])[0]
+                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[0]
                 if(method=='euclid'):
                     d = metric.calc_euclideandst(trajectories[i],trajectories[j])
                 if(d == float('inf')):
@@ -107,7 +107,7 @@ def main():
         #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
         Y = [0 for i in range(M)]+[1 for i in range(M)]
-        D = np.array(getDist(Q,all_traj,method = 'euclid'))
+        D = np.array(getDist(Q,all_traj,method = 'paper2'))
         clf = svm.SVC(kernel = 'precomputed')
         clf.fit(D,Y)
         #pred = clf.predict(D)
@@ -118,7 +118,7 @@ def main():
             all_traj.append(traj_lst['000'][i])
         for i in idx:
             all_traj.append(traj_lst['001'][i])
-        D = np.array(getDist(Q,all_traj,method = 'euclid'))
+        D = np.array(getDist(Q,all_traj,method = 'paper2'))
         pred = clf.predict(D)
         err = calcError(Y,pred)
         print(err)

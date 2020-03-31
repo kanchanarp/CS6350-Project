@@ -30,25 +30,26 @@ class DistanceMetric:
     def filt_lines(self,Q,trajectory):
         cl={}
         lines = trajectory.get_lines()
-        for q in Q:
+        for i in range(len(Q)):
+            q = Q[i]
             lr = random.choice(lines)
             r = np.linalg.norm(q-lr.get_st())
             ql = []
             for l in lines:
                 if(np.linalg.norm(q-l.get_st())<=r):
                     ql.append(l)
-            cl[q] = ql
+            cl[i] = ql
         return cl
         
     def calc_landmarkdst_opt(self,Q,trajectory):
         D = []
-        cl = filt_lines(Q,trajectory)
+        cl = self.filt_lines(Q,trajectory)
         #lines = trajectory.get_lines()
-        for q in Q:
+        for i in range(len(Q)):
+            q = Q[i]
             min_dpt = None
             min_d = float('inf')
-            
-            for l in cl[q]:
+            for l in cl[i]:
                 (d,pt) = l.get_dist(q)  
                 if(min_d>d):
                     min_d = d

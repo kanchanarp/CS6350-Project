@@ -6,6 +6,7 @@ Created on Fri Feb 28 06:26:29 2020
 """
 
 import random
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from Metrics.Line import Line
@@ -23,6 +24,26 @@ def read_file(filename):
                 data.append(np.asarray(list(map(float,terms[:2]))))
     return data
 
+def getDist(Q,trajectories,method = 'paper1'):
+    metric = DistanceMetric(Q)
+    N = len(trajectories)
+    D = [[0 for i in range(N)] for j in range(N)]
+    for i in range(N):
+        for j in range(N):
+            if(i!=j):
+                if(method=='paper1'):
+                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[1]
+                if(method=='paper2'):
+                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[0]
+                if(method=='euclid'):
+                    d = metric.calc_euclideandst(trajectories[i],trajectories[j])
+                if(d == float('inf')):
+                    print("Traj: %d, %d"%(i,j))
+                D[i][j] = d
+            else:
+                D[i][j] = 0
+    return D
+
 def convertToLine(data):
     lines = []
     for i in range(len(data)-1):
@@ -39,7 +60,7 @@ def calclateCost(Q,trajectories,centers):
         cnt  = None
         min_d = float('inf')
         for c in centers:
-            d = metric.calc_euclideandst(t,c)
+            d = metric.calc_trajectorydst_opt(Q,t,c)[1]
             if(d<min_d):
                 min_d = d
                 cnt = c
@@ -63,6 +84,48 @@ def kMedoids(Q,trajectories,k,t_max):
                 if(not(t in tmp_cntrs)):
                     tmp_cntrs[i] = t
                     (cst,_) = calclateCost(Q,trajectories,tmp_cntrs)
+                    if(cst<cst_swp):
+                        cst_swp = cst
+                        bst_swp = tmp_cntrs[:]
+            if(cst_swp < cst_):
+                cst_ = cst_swp
+                bst_ = bst_swp
+        centers = bst_
+    return centers
+
+def calclateCostOpt(trajectories,centers,D):
+    #metric = DistanceMetric(Q)
+    cluster_set = []
+    cost = 0
+    for i in range(len(trajectories)):
+        #t = trajectories[i]
+        cnt  = None
+        min_d = float('inf')
+        for j in range(len(centers)):
+            d = D[i][centers[j]] #metric.calc_trajectorydst_opt(Q,t,c)[1]
+            if(d<min_d):
+                min_d = d
+                cnt = j
+        cluster_set.append(centers[cnt])
+        cost = cost + min_d
+    return (cost,cluster_set)
+
+def kMedoidsOpt(Q,trajectories,k,t_max,D):
+    centers =  random.sample(range(len(trajectories)), k)
+    #D = np.array(getDist(Q,trajectories,method = 'paper2'))
+    (cost,cluster_set) = calclateCostOpt(trajectories,centers,D)
+    for i in range(t_max):
+        print("Iteration: %d"%i)
+        tmp_cntrs = centers[:]
+        cst_ = cost
+        bst_ = tmp_cntrs
+        for i in range(len(centers)):
+            cst_swp=float('inf')
+            bst_swp = None
+            for j in range(len(trajectories)):
+                if(not(j in tmp_cntrs)):
+                    tmp_cntrs[i] = j
+                    (cst,_) = calclateCostOpt(trajectories,tmp_cntrs,D)
                     if(cst<cst_swp):
                         cst_swp = cst
                         bst_swp = tmp_cntrs[:]
@@ -127,7 +190,7 @@ def main():
             data = read_file(f)
             lines = convertToLine(data)
             if(len(lines)>100):
-                t = Trajectory(lines[:100])
+                t = Trajectory(lines)
                 trajectories.append(t)
                 lnths.append(len(lines))
         lnths = np.asarray(lnths)
@@ -148,10 +211,11 @@ def main():
         Q[i] = np.asarray(Q[i])
     sze = min(len(traj_lst['000']),len(traj_lst['001']))
     err_ = []
-    T = 10
+    T = 1
     for j in range(T):
         print('Test no: %d'%j)
-        idx = random.sample(list(range(sze)),10)  
+        #idx = random.sample(list(range(sze)),10)  
+        idx = list(range(sze))  
         all_traj = []
         for i in idx:
             all_traj.append(traj_lst['000'][i])
@@ -159,8 +223,11 @@ def main():
             all_traj.append(traj_lst['001'][i])
         #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
-        cnt = kMedoids(Q,all_traj,2,10)
-        cst = calclateCost(Q,all_traj,cnt)
+        D = getDist(Q,all_traj,method = 'paper1')
+        #print(D[1][2])
+        cnt = kMedoidsOpt(Q,all_traj,2,10,D)
+        cst = calclateCostOpt(all_traj,cnt,D)
+        #print(len(cnt))
         err = calcError(all_traj,traj_lst,cst[1],cnt)
         print(err)
         err_.append(err)
