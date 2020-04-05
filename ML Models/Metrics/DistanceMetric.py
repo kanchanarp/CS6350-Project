@@ -108,3 +108,35 @@ class DistanceMetric:
             diff = lines_a[i].get_st()-lines_b[i].get_st()
             ed = ed + (1.0/l)*math.sqrt(np.dot(diff,np.transpose(diff)))
         return ed
+    
+    def DTW(self,i,j,c1,c2):
+        if(i==0):
+            v = np.linalg.norm(c1[0] - c2[j])
+            self.D[j][i] = v
+            return v
+        if(j==0):
+            v = np.linalg.norm(c1[i] - c2[0])
+            self.D[j][i] = v
+            return v
+        if(self.D[j][i]!=-1):
+            return self.D[j][i]
+        v = np.linalg.norm(c1[i]-c2[j])+min(self.DTW(i-1,j,c1,c2),self.DTW(i-1,j-1,c1,c2),self.DTW(i,j-1,c1,c2))
+        self.D[j][i] = v
+        return v
+        
+    def calc_dtwdistance(self,traj_a,traj_b):
+        lines_a = traj_a.get_lines()
+        lines_b = traj_b.get_lines()
+        k1 = len(lines_a)
+        k2 = len(lines_b)
+        c1 = []
+        for l in lines_a:
+            c1.append(l.get_st())
+        c1.append(lines_a[-1].get_en())
+        c2 = []
+        for l in lines_b:
+            c2.append(l.get_st())
+        c2.append(lines_b[-1].get_en())
+        self.D = [[-1 for i in range(k1+1)] for j in range(k2+1)]
+        dst = self.DTW(k1,k2,c1,c2)
+        return dst

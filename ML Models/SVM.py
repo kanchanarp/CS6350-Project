@@ -6,6 +6,7 @@ Created on Wed Mar  4 16:26:45 2020
 """
 
 import random
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import svm

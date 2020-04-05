@@ -30,6 +30,7 @@ def getDist(Q,trajectories,method = 'paper1'):
     D = [[0 for i in range(N)] for j in range(N)]
     for i in range(N):
         for j in range(N):
+            print("(%d , %d)"%(i,j))
             if(i!=j):
                 if(method=='paper1'):
                     d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[1]
@@ -37,6 +38,8 @@ def getDist(Q,trajectories,method = 'paper1'):
                     d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[0]
                 if(method=='euclid'):
                     d = metric.calc_euclideandst(trajectories[i],trajectories[j])
+                if(method == 'dtw'):
+                    d = metric.calc_dtwdistance(trajectories[i],trajectories[j])
                 if(d == float('inf')):
                     print("Traj: %d, %d"%(i,j))
                 D[i][j] = d
@@ -190,9 +193,9 @@ def main():
             data = read_file(f)
             lines = convertToLine(data)
             if(len(lines)>100):
-                t = Trajectory(lines)
+                t = Trajectory(lines[:100])
                 trajectories.append(t)
-                lnths.append(len(lines))
+                lnths.append(len(lines[:100]))
         lnths = np.asarray(lnths)
         idx = lnths.argsort()[::-1]
         traj = []
@@ -223,7 +226,7 @@ def main():
             all_traj.append(traj_lst['001'][i])
         #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
-        D = getDist(Q,all_traj,method = 'paper1')
+        D = getDist(Q,all_traj,method = 'dtw')
         #print(D[1][2])
         cnt = kMedoidsOpt(Q,all_traj,2,10,D)
         cst = calclateCostOpt(all_traj,cnt,D)
