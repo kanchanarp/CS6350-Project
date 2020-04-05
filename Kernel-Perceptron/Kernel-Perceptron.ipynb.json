@@ -1,0 +1,501 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Processing Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd \n",
+    "import random \n",
+    "import math\n",
+    "import time\n",
+    "from scipy import linalg as LA"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def to_float(data):\n",
+    "    for x in data:\n",
+    "        for i in range(len(data[0])):\n",
+    "            x[i] = float(x[i])\n",
+    "    return data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train1 = []\n",
+    "\n",
+    "with open(\"bank-note/train.csv\", \"r\") as f:\n",
+    "    for line in f:\n",
+    "        item = line.strip().split(\",\")\n",
+    "        train1.append(item) #([1]+ item)\n",
+    "        \n",
+    "train2 = to_float(train1)        \n",
+    "\n",
+    "for i in range(len(train1)):\n",
+    "    train1[i].insert(4,1)\n",
+    "\n",
+    "\n",
+    "test1 = []\n",
+    "\n",
+    "with open(\"bank-note/test.csv\", \"r\") as f:\n",
+    "    for line in f:\n",
+    "        item = line.strip().split(\",\")\n",
+    "        test1.append(item)\n",
+    "        \n",
+    "test2 = to_float(test1)\n",
+    "\n",
+    "for i in range(len(test2)):\n",
+    "    test2[i].insert(4,1)\n",
+    "    \n",
+    "\n",
+    "for i in range(len(train2)):\n",
+    "    train2[i] = np.array(train2[i])\n",
+    "    if train2[i][-1] < 0.5:\n",
+    "        train2[i][-1] = -1\n",
+    "    \n",
+    "\n",
+    "train = np.array(train2)\n",
+    "\n",
+    "\n",
+    "\n",
+    "for i in range(len(test2)):\n",
+    "    test2[i] = np.array(test2[i])\n",
+    "    if test2[i][-1] < 0.5:\n",
+    "        test2[i][-1] = -1\n",
+    "\n",
+    "\n",
+    "test = np.array(test2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "n = len(train)\n",
+    "m = len(test)\n",
+    "d = len(train[0]) - 1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "((872, 6), (500, 6), 5, 872)"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "train.shape, test.shape, d, n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "X = train[:,:-1]\n",
+    "Y = train[:,-1]\n",
+    "y = train[:,-1:]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Nonlinear Perceptron with Gaussian Kernel"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gamma_list = [0.1,0.5,1,5,100]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def K(x,z,gamma):\n",
+    "    return(math.exp((- LA.norm(x-z)**2)/gamma))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def Gram(A, B, gamma):  \n",
+    "    temp = np.sum(A**2,1).reshape(A.shape[0],1) + np.sum(B**2,1).reshape(1,B.shape[0])-2* A @ B.T\n",
+    "    return np.exp(-temp/gamma)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "38.8327898979187\n",
+      "[[ 1.  1.  1. ...  1.  0.  0.]\n",
+      " [ 1.  1.  1. ...  0.  0.  0.]\n",
+      " [ 1.  1.  0. ...  0.  0.  0.]\n",
+      " [ 2.  1.  1. ...  1.  0.  0.]\n",
+      " [17. 29. 21. ... 12. 14.  5.]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "start = time.time()\n",
+    "c = np.zeros((len(gamma_list),n))\n",
+    "T = 100\n",
+    "\n",
+    "for k in range(len(gamma_list)):\n",
+    "    for t in range(T): \n",
+    "        train_list = list(train)\n",
+    "        random.shuffle(train_list)\n",
+    "        train = np.array(train_list)\n",
+    "        G = Gram(train[:,:-1],train[:,:-1],gamma_list[k])\n",
+    "        for i in range(n):\n",
+    "            if train[:,-1][i] * ((c[k] * train[:,-1]) @ G[i]) <= 0:\n",
+    "                c[k][i] = c[k][i] + 1 \n",
+    "\n",
+    "print(time.time() - start)\n",
+    "print(c)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def sgn(x):\n",
+    "    if x >=0:\n",
+    "        return 1\n",
+    "    else:\n",
+    "        return -1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def predict(Z,k):\n",
+    "    Q = sum(c[k].reshape(-1,1) * train[:,-1].reshape(-1,1) * Gram(train[:,:-1],Z,gamma_list[k]),0) # 0: add rows\n",
+    "    return np.where(Q >= 0, 1,-1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train error = [0.         0.         0.         0.00917431 0.18004587]\n",
+      "Number of missclassified train examples: [  0.   0.   0.   8. 157.]\n",
+      "0.3432331085205078\n"
+     ]
+    }
+   ],
+   "source": [
+    "start = time.time()\n",
+    "a = np.zeros(len(gamma_list))\n",
+    "\n",
+    "for k in range(len(gamma_list)):\n",
+    "    P = predict(X,k)\n",
+    "    for i in range(n):\n",
+    "        if P[i] * Y[i] < 0:\n",
+    "            a[k] = a[k] + 1\n",
+    "print(\"Train error =\", a/n)\n",
+    "print(\"Number of missclassified train examples:\", a)\n",
+    "print(time.time() - start)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Test error = [0.004 0.    0.002 0.008 0.176]\n",
+      "Number of missclassified test examples: [ 2.  0.  1.  4. 88.]\n",
+      "0.22958993911743164\n"
+     ]
+    }
+   ],
+   "source": [
+    "start = time.time()\n",
+    "b = np.zeros(len(gamma_list))\n",
+    "\n",
+    "for k in range(len(gamma_list)):\n",
+    "    P = predict(test[:,:-1],k)\n",
+    "    for i in range(m):\n",
+    "        if P[i] * test[i][-1] < 0:\n",
+    "            b[k] = b[k] + 1\n",
+    "            \n",
+    "print(\"Test error =\", b/m)\n",
+    "print(\"Number of missclassified test examples:\", b)\n",
+    "print(time.time() - start)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Dic = {}\n",
+    "\n",
+    "for k in range(len(gamma_list)):\n",
+    "    Dic[k+1] = [gamma_list[k], a[k]/n, b[k]/m]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>gamma</th>\n",
+       "      <th>Train Error</th>\n",
+       "      <th>Test Error</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td>1</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>2</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>3</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.002</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>4</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>0.009174</td>\n",
+       "      <td>0.008</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>5</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>0.180046</td>\n",
+       "      <td>0.176</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   gamma  Train Error  Test Error\n",
+       "1    0.1     0.000000       0.004\n",
+       "2    0.5     0.000000       0.000\n",
+       "3    1.0     0.000000       0.002\n",
+       "4    5.0     0.009174       0.008\n",
+       "5  100.0     0.180046       0.176"
+      ]
+     },
+     "execution_count": 32,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "pd.DataFrame.from_dict(Dic, orient='index', columns=['gamma','Train Error', 'Test Error'])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Without shuffeling with T=1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 487,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>gamma</th>\n",
+       "      <th>Train Error</th>\n",
+       "      <th>Test Error</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td>1</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.002294</td>\n",
+       "      <td>0.002</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>2</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>3</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>4</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.004</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>5</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>0.033257</td>\n",
+       "      <td>0.046</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   gamma  Train Error  Test Error\n",
+       "1    0.1     0.002294       0.002\n",
+       "2    0.5     0.000000       0.004\n",
+       "3    1.0     0.000000       0.004\n",
+       "4    5.0     0.000000       0.004\n",
+       "5  100.0     0.033257       0.046"
+      ]
+     },
+     "execution_count": 487,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
