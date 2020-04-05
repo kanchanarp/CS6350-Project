@@ -1,0 +1,987 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Processing Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import math\n",
+    "import time\n",
+    "import pandas as pd \n",
+    "from scipy import linalg as LA\n",
+    "from scipy.optimize import minimize, Bounds"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def to_float(data):\n",
+    "    for x in data:\n",
+    "        for i in range(len(data[0])):\n",
+    "            x[i] = float(x[i])\n",
+    "    return data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train1 = []\n",
+    "\n",
+    "with open(\"bank-note/train.csv\", \"r\") as f:\n",
+    "    for line in f:\n",
+    "        item = line.strip().split(\",\")\n",
+    "        train1.append(item) #([1]+ item)\n",
+    "        \n",
+    "train2 = to_float(train1)        \n",
+    "\n",
+    "#for i in range(len(train1)):\n",
+    "#    train1[i].insert(4,1)\n",
+    "\n",
+    "\n",
+    "test1 = []\n",
+    "\n",
+    "with open(\"bank-note/test.csv\", \"r\") as f:\n",
+    "    for line in f:\n",
+    "        item = line.strip().split(\",\")\n",
+    "        test1.append(item)\n",
+    "        \n",
+    "test2 = to_float(test1)\n",
+    "\n",
+    "#for i in range(len(test2)):\n",
+    "#    test2[i].insert(4,1)\n",
+    "    \n",
+    "\n",
+    "for i in range(len(train2)):\n",
+    "    train2[i] = np.array(train2[i])\n",
+    "    if train2[i][-1] < 0.5:\n",
+    "        train2[i][-1] = -1\n",
+    "    \n",
+    "\n",
+    "train = np.array(train2)\n",
+    "\n",
+    "\n",
+    "\n",
+    "for i in range(len(test2)):\n",
+    "    test2[i] = np.array(test2[i])\n",
+    "    if test2[i][-1] < 0.5:\n",
+    "        test2[i][-1] = -1\n",
+    "\n",
+    "\n",
+    "test = np.array(test2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "n = len(train)\n",
+    "m = len(test)\n",
+    "d = len(train[0]) - 1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "((872, 5), (500, 5), 4, 872)"
+      ]
+     },
+     "execution_count": 43,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "train.shape, test.shape, d, n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "X = train[:,:-1]\n",
+    "Y = train[:,-1]\n",
+    "y = train[:,-1:]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Part (b): Nonlinear SVM with Gaussian Kernel"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 45,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gamma_list = [0.1,0.5,1,5,100]\n",
+    "C_list = [100/873, 500/873, 700/873]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 46,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def K(x,z,gamma):\n",
+    "    return(math.exp((- LA.norm(x-z)**2)/gamma))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Gram Matrix: Resturn a matrix whose ijth entry is exp{-||A_i-B_j||^2/gamma}\n",
+    "def Gram(A, B, gamma):  \n",
+    "    temp = np.sum(A**2,1).reshape(A.shape[0],1) + np.sum(B**2,1).reshape(1,B.shape[0])-2* A @ B.T\n",
+    "    return np.exp(-temp/gamma)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 48,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Ker = [np.zeros((n,n)) for i in range(len(gamma_list))]\n",
+    "\n",
+    "for k in range(len(gamma_list)):\n",
+    "    Ker[k] = Gram(X,X,gamma_list[k])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 52,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "6732.54993891716\n"
+     ]
+    }
+   ],
+   "source": [
+    "SVM_kernel_dic = {}\n",
+    "a_dic = {}\n",
+    "\n",
+    "start = time.time()\n",
+    "for j in range(len(gamma_list)):\n",
+    "    K1 = Gram(X, X, gamma_list[j])\n",
+    "    K2 = y*K1*y.T\n",
+    "    f = lambda x: 0.5 * x.T @ K2 @ x - np.sum(x) # x in place or a\n",
+    "    for i in range(len(C_list)):\n",
+    "        start = time.time()\n",
+    "        bounds = tuple([(0,C_list[i]) for k in range(n)])\n",
+    "        cons ={'type':'eq', 'fun': lambda x: x@Y}\n",
+    "        SVM_kernel_dic[(i,j)] = minimize(f, np.zeros(n), method='SLSQP', \n",
+    "                                         bounds = bounds, constraints = cons) \n",
+    "                                          # , options={'ftol': 1e-9, 'disp': True})\n",
+    "        a_dic[(i,j)] = SVM_kernel_dic[(i,j)].x\n",
+    "        print(time.time() - start)\n",
+    "print(time.time() - start)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 53,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "a_list = np.zeros((len(C_list),len(gamma_list),n))\n",
+    "\n",
+    "for i in range(len(C_list)):\n",
+    "    for j in range(len(gamma_list)):\n",
+    "        a_list[i][j] = a_dic[(i,j)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 55,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "supp_vec_alpha = np.zeros((len(C_list), len(gamma_list),n))\n",
+    "\n",
+    "for k in range(len(gamma_list)):\n",
+    "    for i in range(len(C_list)):\n",
+    "        v = 0\n",
+    "        q = 0\n",
+    "        for j in range(n):\n",
+    "            if a_list[i][k][j] > 0: \n",
+    "                u = j\n",
+    "                supp_vec_alpha[i][k][j] = a_list[i][k][u]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 56,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "b_list = np.zeros((len(C_list), len(gamma_list)))\n",
+    "\n",
+    "for k in range(len(gamma_list)):\n",
+    "    for i in range(len(C_list)):\n",
+    "        v = 0\n",
+    "        q = 0\n",
+    "        for j in range(n):\n",
+    "            if 1e-6 < a_list[i][k][j] < C_list[i] - 1e-8:\n",
+    "                v = v + 1\n",
+    "                q = q + Y[j]- sum(a_list[i][k][r]*Y[r]*Ker[k][r][j] for r in range(n))\n",
+    "\n",
+    "        b_list[i][k] = q/v"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Prediction and Errors"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 57,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def sgn(x):\n",
+    "    if x >=0:\n",
+    "        return 1\n",
+    "    else:\n",
+    "        return -1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 58,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def predict(x, gamma, C):\n",
+    "    \n",
+    "    for j in range(len(C_list)):\n",
+    "        if C == C_list[j]:\n",
+    "            l = j\n",
+    "\n",
+    "    for k in range(len(gamma_list)):\n",
+    "        if gamma == gamma_list[k]:\n",
+    "            p = k \n",
+    "     \n",
+    "    return sgn(sum(supp_vec_alpha[l][p][i]*Y[i]*K(X[i], x, gamma) for i in range(n))+ b_list[l][p])    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 59,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "452.26827216148376\n"
+     ]
+    }
+   ],
+   "source": [
+    "start = time.time()\n",
+    "label_train_predict = np.ones((len(C_list), len(gamma_list),n))\n",
+    "\n",
+    "for j in range(len(C_list)):\n",
+    "    for k in range(len(gamma_list)):\n",
+    "        for i in range(n):\n",
+    "            label_train_predict[j][k][i] = predict(X[i],gamma_list[k], C_list[j])\n",
+    "            \n",
+    "print(time.time() - start)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 60,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train error = [[0.44610092 0.40711009 0.09518349 0.00344037 0.01605505]\n",
+      " [0.         0.         0.         0.         0.00802752]\n",
+      " [0.         0.         0.         0.         0.00344037]]\n",
+      "Number of missclassified train examples: [[389. 355.  83.   3.  14.]\n",
+      " [  0.   0.   0.   0.   7.]\n",
+      " [  0.   0.   0.   0.   3.]]\n",
+      "0.028197050094604492\n"
+     ]
+    }
+   ],
+   "source": [
+    "start = time.time()\n",
+    "c = np.zeros((len(C_list),len(gamma_list)))\n",
+    "\n",
+    "for j in range(len(C_list)):\n",
+    "    for k in range(len(gamma_list)):\n",
+    "        for i in range(n):\n",
+    "            if label_train_predict[j][k][i] != Y[i]:\n",
+    "                c[j][k] = c[j][k] + 1\n",
+    "print(\"Train error =\", c/len(X))\n",
+    "print(\"Number of missclassified train examples:\", c)\n",
+    "print(time.time() - start)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 61,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "label_test_predict = np.ones((len(C_list),len(gamma_list),m))\n",
+    "\n",
+    "for j in range(len(C_list)):\n",
+    "    for k in range(len(gamma_list)):\n",
+    "        for i in range(m):\n",
+    "            label_test_predict[j][k][i] = predict(test[i][:-1],gamma_list[k], C_list[j])\n",
+    "            "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 62,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train error = [[0.442 0.426 0.192 0.004 0.014]\n",
+      " [0.348 0.018 0.004 0.    0.006]\n",
+      " [0.232 0.01  0.004 0.    0.004]]\n",
+      "Number of missclassified train examples: [[221. 213.  96.   2.   7.]\n",
+      " [174.   9.   2.   0.   3.]\n",
+      " [116.   5.   2.   0.   2.]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "e = np.zeros((len(C_list),len(gamma_list)))\n",
+    "\n",
+    "for j in range(len(C_list)):\n",
+    "    for k in range(len(gamma_list)):\n",
+    "        for i in range(m):\n",
+    "            if label_test_predict[j][k][i] != test[i][-1]:\n",
+    "                e[j][k] = e[j][k] + 1\n",
+    "print(\"Train error =\", e/len(test))\n",
+    "print(\"Number of missclassified train examples:\", e)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 63,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "d1 = {}\n",
+    "d2 = {}\n",
+    "d3 = {}\n",
+    "Dic = [d1,d2,d3]\n",
+    "\n",
+    "for i in range(len(C_list)):\n",
+    "    for k in range(len(gamma_list)):\n",
+    "        Dic[i][k+1] = [C_list[i]*(n+1), gamma_list[k], c[i][k]/n, e[i][k]/m, b_list[i][k]]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 64,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>873*C = 100</th>\n",
+       "      <th>gamma</th>\n",
+       "      <th>Train Error</th>\n",
+       "      <th>Test Error</th>\n",
+       "      <th>Biased</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td>1</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.446101</td>\n",
+       "      <td>0.442</td>\n",
+       "      <td>-0.883218</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>2</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.407110</td>\n",
+       "      <td>0.426</td>\n",
+       "      <td>-0.676788</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>3</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>0.095183</td>\n",
+       "      <td>0.192</td>\n",
+       "      <td>-0.429941</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>4</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>0.003440</td>\n",
+       "      <td>0.004</td>\n",
+       "      <td>-0.135006</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>5</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>0.016055</td>\n",
+       "      <td>0.014</td>\n",
+       "      <td>0.187883</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   873*C = 100  gamma  Train Error  Test Error    Biased\n",
+       "1        100.0    0.1     0.446101       0.442 -0.883218\n",
+       "2        100.0    0.5     0.407110       0.426 -0.676788\n",
+       "3        100.0    1.0     0.095183       0.192 -0.429941\n",
+       "4        100.0    5.0     0.003440       0.004 -0.135006\n",
+       "5        100.0  100.0     0.016055       0.014  0.187883"
+      ]
+     },
+     "execution_count": 64,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "pd.DataFrame.from_dict(Dic[0], orient='index', \n",
+    "                       columns=['873*C = 100','gamma','Train Error', 'Test Error', 'Biased'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 65,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>873*C = 500</th>\n",
+       "      <th>gamma</th>\n",
+       "      <th>Train Error</th>\n",
+       "      <th>Test Error</th>\n",
+       "      <th>Biased</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td>1</td>\n",
+       "      <td>500.0</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.348</td>\n",
+       "      <td>-0.420552</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>2</td>\n",
+       "      <td>500.0</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.018</td>\n",
+       "      <td>-0.204367</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>3</td>\n",
+       "      <td>500.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.004</td>\n",
+       "      <td>-0.177199</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>4</td>\n",
+       "      <td>500.0</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.000</td>\n",
+       "      <td>-0.125299</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>5</td>\n",
+       "      <td>500.0</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>0.008028</td>\n",
+       "      <td>0.006</td>\n",
+       "      <td>0.375431</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   873*C = 500  gamma  Train Error  Test Error    Biased\n",
+       "1        500.0    0.1     0.000000       0.348 -0.420552\n",
+       "2        500.0    0.5     0.000000       0.018 -0.204367\n",
+       "3        500.0    1.0     0.000000       0.004 -0.177199\n",
+       "4        500.0    5.0     0.000000       0.000 -0.125299\n",
+       "5        500.0  100.0     0.008028       0.006  0.375431"
+      ]
+     },
+     "execution_count": 65,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "pd.DataFrame.from_dict(Dic[1], orient='index', \n",
+    "                       columns=['873*C = 500','gamma','Train Error', 'Test Error', 'Biased'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 66,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>873*C = 700</th>\n",
+       "      <th>gamma</th>\n",
+       "      <th>Train Error</th>\n",
+       "      <th>Test Error</th>\n",
+       "      <th>Biased</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td>1</td>\n",
+       "      <td>700.0</td>\n",
+       "      <td>0.1</td>\n",
+       "      <td>0.00000</td>\n",
+       "      <td>0.232</td>\n",
+       "      <td>-0.250504</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>2</td>\n",
+       "      <td>700.0</td>\n",
+       "      <td>0.5</td>\n",
+       "      <td>0.00000</td>\n",
+       "      <td>0.010</td>\n",
+       "      <td>-0.176974</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>3</td>\n",
+       "      <td>700.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>0.00000</td>\n",
+       "      <td>0.004</td>\n",
+       "      <td>-0.165587</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>4</td>\n",
+       "      <td>700.0</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>0.00000</td>\n",
+       "      <td>0.000</td>\n",
+       "      <td>-0.119374</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>5</td>\n",
+       "      <td>700.0</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>0.00344</td>\n",
+       "      <td>0.004</td>\n",
+       "      <td>0.384519</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   873*C = 700  gamma  Train Error  Test Error    Biased\n",
+       "1        700.0    0.1      0.00000       0.232 -0.250504\n",
+       "2        700.0    0.5      0.00000       0.010 -0.176974\n",
+       "3        700.0    1.0      0.00000       0.004 -0.165587\n",
+       "4        700.0    5.0      0.00000       0.000 -0.119374\n",
+       "5        700.0  100.0      0.00344       0.004  0.384519"
+      ]
+     },
+     "execution_count": 66,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "pd.DataFrame.from_dict(Dic[2], orient='index', \n",
+    "                       columns=['873*C = 700','gamma','Train Error', 'Test Error', 'Biased'])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Part (c)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 78,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "supp_vec = [[0] * len(gamma_list)] * len(C_list) \n",
+    "\n",
+    "I_list = []\n",
+    "count = np.zeros((len(C_list), len(gamma_list)))\n",
+    "\n",
+    "for j in range(len(C_list)):\n",
+    "    for k in range(len(gamma_list)):\n",
+    "        I = [] \n",
+    "        v = 0\n",
+    "        for i in range(n):\n",
+    "            if a_list[j][k][i] > 1e-6:\n",
+    "                I.append(i)\n",
+    "                v = v + 1\n",
+    "                \n",
+    "        I_list.append(I)\n",
+    "        count[j][k] = v\n",
+    "        supp_vec[j][k] = X[I, :]\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 79,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[869., 825., 805., 442., 290.],\n",
+       "       [869., 731., 556., 208., 116.],\n",
+       "       [868., 694., 528., 194.,  99.]])"
+      ]
+     },
+     "execution_count": 79,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "count"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 80,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "I_list1 = [I_list[:5], I_list[5:10], I_list[10:]]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 81,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>gamma = 0.1</th>\n",
+       "      <th>gamma = 0.5</th>\n",
+       "      <th>gamma = 1</th>\n",
+       "      <th>gamma =5</th>\n",
+       "      <th>gamma =100</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td>C = 100/873</td>\n",
+       "      <td>869.0</td>\n",
+       "      <td>825.0</td>\n",
+       "      <td>805.0</td>\n",
+       "      <td>442.0</td>\n",
+       "      <td>290.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>C = 500/873</td>\n",
+       "      <td>869.0</td>\n",
+       "      <td>731.0</td>\n",
+       "      <td>556.0</td>\n",
+       "      <td>208.0</td>\n",
+       "      <td>116.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>C = 700/873</td>\n",
+       "      <td>868.0</td>\n",
+       "      <td>694.0</td>\n",
+       "      <td>528.0</td>\n",
+       "      <td>194.0</td>\n",
+       "      <td>99.0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "             gamma = 0.1  gamma = 0.5  gamma = 1  gamma =5  gamma =100\n",
+       "C = 100/873        869.0        825.0      805.0     442.0       290.0\n",
+       "C = 500/873        869.0        731.0      556.0     208.0       116.0\n",
+       "C = 700/873        868.0        694.0      528.0     194.0        99.0"
+      ]
+     },
+     "execution_count": 81,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data = {'C = 100/873': count[0], 'C = 500/873': count[1], 'C = 700/873': count[2]}\n",
+    "pd.DataFrame.from_dict(data, orient='index', \n",
+    "                       columns=['gamma = 0.1','gamma = 0.5','gamma = 1', 'gamma =5', 'gamma =100'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 95,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Same = np.zeros(len(gamma_list)-1)\n",
+    "\n",
+    "for k in range(len(gamma_list)-1):\n",
+    "    for i in range(len(I_list[5:10][k])):\n",
+    "        if I_list[:5][k][i] in I_list[5:10][k+1]:\n",
+    "            Same[k] += 1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 109,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[731.0, 493.0, 145.0, 52.0]"
+      ]
+     },
+     "execution_count": 109,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "S = list(Same)\n",
+    "S"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 125,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>(gamma_i, gamma_i+1):</th>\n",
+       "      <th>(0.1, 0.5)</th>\n",
+       "      <th>(0.5, 1)</th>\n",
+       "      <th>(1, 5)</th>\n",
+       "      <th>(5, 10)</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td></td>\n",
+       "      <td>Number of overlapped support vectors:</td>\n",
+       "      <td>731.0</td>\n",
+       "      <td>493.0</td>\n",
+       "      <td>145.0</td>\n",
+       "      <td>52.0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                  (gamma_i, gamma_i+1):  (0.1, 0.5)  (0.5, 1)  (1, 5)  (5, 10)\n",
+       "  Number of overlapped support vectors:       731.0     493.0   145.0     52.0"
+      ]
+     },
+     "execution_count": 125,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "dd = {'': [\"Number of overlapped support vectors:\"] + S}\n",
+    "pd.DataFrame.from_dict(dd, orient='index', \n",
+    "                       columns=['(gamma_i, gamma_i+1):', '(0.1, 0.5)', \n",
+    "                                '(0.5, 1)','(1, 5)', '(5, 10)'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
