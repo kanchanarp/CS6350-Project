@@ -140,3 +140,42 @@ class DistanceMetric:
         self.D = [[-1 for i in range(k1+1)] for j in range(k2+1)]
         dst = self.DTW(k1,k2,c1,c2)
         return dst
+    
+    def _c(self,ca, i, j, p, q):
+        if ca[i, j] > -1:
+            return ca[i, j]
+        elif i == 0 and j == 0:
+            ca[i, j] = np.linalg.norm(p[i]-q[j])
+        elif i > 0 and j == 0:
+            ca[i, j] = max(self._c(ca, i-1, 0, p, q), np.linalg.norm(p[i]-q[j]))
+        elif i == 0 and j > 0:
+            ca[i, j] = max(self._c(ca, 0, j-1, p, q), np.linalg.norm(p[i]-q[j]))
+        elif i > 0 and j > 0:
+            ca[i, j] = max(
+                min(
+                    self._c(ca, i-1, j, p, q),
+                    self._c(ca, i-1, j-1, p, q),
+                    self._c(ca, i, j-1, p, q)
+                ),
+                np.linalg.norm(p[i]-q[j])
+                )
+        else:
+            ca[i, j] = float('inf')
+        return ca[i, j]
+    
+    def calc_fretchetdistance(self,traj_a,traj_b):
+        lines_a = traj_a.get_lines()
+        lines_b = traj_b.get_lines()
+        k1 = len(lines_a)
+        k2 = len(lines_b)
+        c1 = []
+        for l in lines_a:
+            c1.append(l.get_st())
+        c1.append(lines_a[-1].get_en())
+        c2 = []
+        for l in lines_b:
+            c2.append(l.get_st())
+        c2.append(lines_b[-1].get_en())
+        ca = (np.ones((k1, k2), dtype=np.float64) * -1)
+        dist = self._c(ca, k1-1, k2-1, c1, c2)
+        return dist

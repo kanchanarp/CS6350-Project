@@ -40,6 +40,8 @@ def getDist(Q,trajectories,method = 'paper1'):
                     d = metric.calc_euclideandst(trajectories[i],trajectories[j])
                 if(method == 'dtw'):
                     d = metric.calc_dtwdistance(trajectories[i],trajectories[j])
+                if(method=='frechet'):
+                    d = metric.calc_fretchetdistance(trajectories[i],trajectories[j])
                 if(d == float('inf')):
                     print("Traj: %d, %d"%(i,j))
                 D[i][j] = d
@@ -226,8 +228,8 @@ def main():
             all_traj.append(traj_lst['001'][i])
         #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
-        D = getDist(Q,all_traj,method = 'dtw')
-        #print(D[1][2])
+        D = getDist(Q,all_traj,method = 'frechet')
+        print(D[1][2])
         cnt = kMedoidsOpt(Q,all_traj,2,10,D)
         cst = calclateCostOpt(all_traj,cnt,D)
         #print(len(cnt))
