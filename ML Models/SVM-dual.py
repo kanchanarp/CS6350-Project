@@ -25,14 +25,6 @@ def read_file(filename,biased = False):
     data['y'] = np.asarray(data['y'])
     return data
 
-def gram_matrix_2(X,k):
-    sze = np.size(X,0)
-    K = np.zeros((sze,sze)) 
-    for i in range(sze):
-        for j in range(sze):
-            K[i][j] = k(X[i],X[j])
-    return K
-
 def gram_matrix(X,X_,k):
     sze1 = np.size(X,0)
     sze2 = np.size(X_,0)
@@ -58,26 +50,6 @@ def cons_jac(a,y):
 
 def opt_jac(a,K):
     return np.dot(a,K)-np.array([1 for i in a])
-
-def opt_func_2(a,X,y,k):
-    sze = np.size(y)
-    res = 0
-    global cnt
-    print("Call %d"%cnt)
-    cnt = cnt+1
-    for i in range(sze):
-        for j in range(sze):
-            res = res + 0.5*a[i]*a[j]*y[i]*y[j]*k(X[i],X[j])
-    for i in range(sze):
-        res = res - a[i]
-    return res
-
-def cons_func_2(a,y):
-    res = 0
-    sze = np.size(y)
-    for i in range(sze):
-        res = res + a[i]*y[i]
-    return res
 
 def find_b(a,K,y):
     b=0

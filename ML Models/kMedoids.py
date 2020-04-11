@@ -24,7 +24,7 @@ def read_file(filename):
                 data.append(np.asarray(list(map(float,terms[:2]))))
     return data
 
-def getDist(Q,trajectories,method = 'paper1'):
+def getDist(Q,trajectories,method = 'euclid'):
     metric = DistanceMetric(Q)
     N = len(trajectories)
     D = [[0 for i in range(N)] for j in range(N)]
@@ -78,7 +78,7 @@ def kMedoids(Q,trajectories,k,t_max):
     print(centers)
     (cost,cluster_set) = calclateCost(Q,trajectories,centers)
     for i in range(t_max):
-        print("Iteration: %d"%i)
+        #print("Iteration: %d"%i)
         tmp_cntrs = centers[:]
         cst_ = cost
         bst_ = tmp_cntrs
@@ -120,7 +120,7 @@ def kMedoidsOpt(Q,trajectories,k,t_max,D):
     #D = np.array(getDist(Q,trajectories,method = 'paper2'))
     (cost,cluster_set) = calclateCostOpt(trajectories,centers,D)
     for i in range(t_max):
-        print("Iteration: %d"%i)
+        #print("Iteration: %d"%i)
         tmp_cntrs = centers[:]
         cst_ = cost
         bst_ = tmp_cntrs
@@ -187,7 +187,7 @@ def main():
     files = ['000','001']
     traj_lst = {'000':[] , '001':[]}
     for name in files:
-        dirpath = "ExtractedData/"+name+"/CSV/*.csv"
+        dirpath = "ExtractedData/"+name+"/CSVOrig/*.csv"
         dirlst = glob.glob(dirpath)
         trajectories = []
         lnths = []
@@ -195,9 +195,9 @@ def main():
             data = read_file(f)
             lines = convertToLine(data)
             if(len(lines)>100):
-                t = Trajectory(lines[:100])
+                t = Trajectory(lines)
                 trajectories.append(t)
-                lnths.append(len(lines[:100]))
+                lnths.append(len(lines))
         lnths = np.asarray(lnths)
         idx = lnths.argsort()[::-1]
         traj = []
@@ -207,8 +207,8 @@ def main():
     Q = []
     N = 10
     while(len(Q)<N):
-        x = random.randrange(437030,467040)
-        y = random.randrange(4416500,4436700)
+        x = 39.0+2*random.random()
+        y = 115.0+2*random.random()
         p = [x,y]
         if(not(p in Q)):
             Q.append(p)
@@ -228,9 +228,12 @@ def main():
             all_traj.append(traj_lst['001'][i])
         #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
-        D = getDist(Q,all_traj,method = 'frechet')
-        print(D[1][2])
-        cnt = kMedoidsOpt(Q,all_traj,2,10,D)
+        D = getDist(Q,all_traj,method = 'paper1')
+        L = []
+        for R in D[:4]:
+            L.append(R[:4])
+        print(L)
+        cnt = kMedoidsOpt(Q,all_traj,2,100,D)
         cst = calclateCostOpt(all_traj,cnt,D)
         #print(len(cnt))
         err = calcError(all_traj,traj_lst,cst[1],cnt)
