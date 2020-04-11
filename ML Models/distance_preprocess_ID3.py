@@ -9,6 +9,13 @@ import utm
 import csv
 import glob
 import os
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import svm
+from Metrics.Line import Line
+from Metrics.Trajectory import Trajectory
+from Metrics.DistanceMetric import DistanceMetric
 
 def read_file(filename):
     data = []
@@ -24,8 +31,12 @@ def read_file(filename):
 def write_file(filename,data):
     f = open(filename,'w',encoding = 'utf-8-sig')
     lines = []
+    #sze = np.size(data,1)
     for d in data:
-        l = str(d[0])+","+str(d[1])+"\n"
+        st = list(map(str,d))
+        l = ","
+        l = l.join(st)
+        l = l + "\n"
         lines.append(l)
     f.writelines(lines)
     f.close()
@@ -46,6 +57,12 @@ for f in files:
     lines = convertToLine(data)
     t = Trajectory(lines)
     trajectories.append(t)
+metric = DistanceMetric(Q)
+data = []
+for t in trajectories:
+    D = metric.calc_landmarkdst(Q,t)
+    data.append([d[0] for d in D])
+write_file("ID3_Prep.csv",data)
 #dirlst = glob.glob("*.txt")
 #count = 0
 #for file in dirlst:
