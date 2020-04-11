@@ -95,10 +95,10 @@ def get_pred(a,y,K,b,y_):
     return pred,1.0*err/sze1
 
 gamma = 1
-def kernel(x,y):
+def kernel(x,y,d):
     global gamma
     #print(gamma)
-    return np.exp(-1*(np.linalg.norm(x-y)**2/gamma))
+    return np.exp(-1*(d(x,y)**2/gamma))
 
 def SVMdual(X,y,K,bnds,cons,x0):
     H = had_prodct(y,K)
