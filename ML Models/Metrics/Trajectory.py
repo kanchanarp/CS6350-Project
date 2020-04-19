@@ -17,4 +17,11 @@ class Trajectory:
         
     def get_lines(self):
         return self.lines
+
+    def set_user(self,user):
+        self.user = user
+
+    def get_user(self):
+        return self.user
+    
     

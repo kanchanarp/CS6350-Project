@@ -12,7 +12,7 @@ import os
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import svm
+#from sklearn import svm
 from Metrics.Line import Line
 from Metrics.Trajectory import Trajectory
 from Metrics.DistanceMetric import DistanceMetric
@@ -20,7 +20,7 @@ from Metrics.DistanceMetric import DistanceMetric
 def read_file(filename):
     data = []
     count = 0
-    with open(filename,'r') as f:
+    with open(filename,'r',encoding = 'utf-8-sig') as f:
         for line in f:
             count = count + 1
             if(count > 0):
@@ -44,25 +44,35 @@ def write_file(filename,data):
 def convertToLine(data):
     lines = []
     for i in range(len(data)-1):
-        if(not(data[0][0]==data[1][0] and data[0][1]==data[1][1])):
-            l = Line(data[0],data[1])
+        if(not(data[i][0]==data[i+1][0] and data[i][1]==data[i+1][1])):
+            l = Line(data[i],data[i+1])
             lines.append(l)
     return lines
 
-Q = read_file("BestQ.csv")
-files = []
+Q = read_file("TDriveBest/best_points.csv")
+print("File read!")
+dirs = ['366','1131','2560','3015','3557','3579','6275','7146','8179','8717']
 trajectories = []
-for f in files:
-    data = read_file(f)
-    lines = convertToLine(data)
-    t = Trajectory(lines)
-    trajectories.append(t)
+for dr in dirs:
+    dirpath = "TDriveBest/"+dr+"/*.csv"
+    files = glob.glob(dirpath)
+    print(dr)
+    for f in files:
+        data = read_file(f)
+        lines = convertToLine(data)
+        t = Trajectory(lines)
+        t.set_user(int(dr))
+        trajectories.append(t)
 metric = DistanceMetric(Q)
 data = []
+print(len(trajectories))
 for t in trajectories:
+    print("%d %d"%(trajectories.index(t),len(t.get_lines())))
     D = metric.calc_landmarkdst(Q,t)
-    data.append([d[0] for d in D])
-write_file("ID3_Prep.csv",data)
+    D_ = [d[0] for d in D]
+    D_.append(t.get_user())
+    data.append(D_)
+write_file("TDriveBest/ID3_Prep_2.csv",data)
 #dirlst = glob.glob("*.txt")
 #count = 0
 #for file in dirlst:

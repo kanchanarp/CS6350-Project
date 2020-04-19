@@ -35,7 +35,7 @@ def load_data(train_path, test_path, numeric_list = None, convert_type = 'median
     
     train = []
     train_labels = []
-    with open(train_path, "r") as f:
+    with open(train_path, "r",encoding = 'utf-8-sig') as f:
         for line in f:
             item = line.strip().split(",")
             train.append(item[:-1])
@@ -43,15 +43,16 @@ def load_data(train_path, test_path, numeric_list = None, convert_type = 'median
 
     test = []
     test_labels = []
-    with open(test_path, "r") as f:
+    with open(test_path, "r",encoding = 'utf-8-sig') as f:
         for line in f:
             item = line.strip().split(",")
             test.append(item[:-1])
             test_labels.append(item[-1])
-            
+    
+    print(len(train))        
     if numeric_list == None:
         numeric_list = []
-
+    
     else: 
         for attr in numeric_list:
             convert_numeric(train, test, attr, convert_type)
@@ -291,11 +292,11 @@ class DecisionTree(object):
 #attributes = ['age', 'job', 'marital', 'education', 'default', 'balance', 'housing', 'loan', 
 # 'contact', 'day', 'month', 'duration', 'campaign', 'pdays', 'previous', 'poutcome', 'y']
 
-attributes = [i for i in range(16)]
-numeric_list = [0,5,9,11,12,13,14]
+attributes = [i for i in range(50)]
+numeric_list = list(range(50))
     
 train, labels, test, test_labels = load_data(
-    "bank-1/train.csv", "bank-1/test.csv", numeric_list, convert_type = 'median')
+    "ID3_Train.csv", "ID3_Test.csv", numeric_list, convert_type = 'median')
 
 
 # In[31]:
@@ -317,6 +318,10 @@ for x in test:
 
 
 print(P)
+err = 0.0
+for i in range(len(P)):
+    err = err + (P[i]!=test_labels[i])
+print(err/len(P))
 
 
 # In[ ]:

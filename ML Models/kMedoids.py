@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from Metrics.Line import Line
 from Metrics.Trajectory import Trajectory
 from Metrics.DistanceMetric import DistanceMetric
+import similaritymeasures as sm
 
 def read_file(filename):
     data = []
@@ -24,6 +25,13 @@ def read_file(filename):
                 data.append(np.asarray(list(map(float,terms[:2]))))
     return data
 
+def get_pts(t):
+    lines = t.get_lines()
+    pts = [lines[0].get_st()]
+    for l in lines:
+        pts.append(l.get_en())
+    return pts
+    
 def getDist(Q,trajectories,method = 'euclid'):
     metric = DistanceMetric(Q)
     N = len(trajectories)
@@ -39,9 +47,15 @@ def getDist(Q,trajectories,method = 'euclid'):
                 if(method=='euclid'):
                     d = metric.calc_euclideandst(trajectories[i],trajectories[j])
                 if(method == 'dtw'):
-                    d = metric.calc_dtwdistance(trajectories[i],trajectories[j])
+                    pts1 = get_pts(trajectories[i])
+                    pts2 = get_pts(trajectories[j])
+                    d,_ = sm.dtw(pts1,pts2)
+                    #d = metric.calc_dtwdistance(trajectories[i],trajectories[j])
                 if(method=='frechet'):
-                    d = metric.calc_fretchetdistance(trajectories[i],trajectories[j])
+                    pts1 = get_pts(trajectories[i])
+                    pts2 = get_pts(trajectories[j])
+                    d = sm.frechet_dist(pts1,pts2)
+                    #d = metric.calc_fretchetdistance(trajectories[i],trajectories[j])
                 if(d == float('inf')):
                     print("Traj: %d, %d"%(i,j))
                 D[i][j] = d
@@ -52,8 +66,8 @@ def getDist(Q,trajectories,method = 'euclid'):
 def convertToLine(data):
     lines = []
     for i in range(len(data)-1):
-        if(not(data[0][0]==data[1][0] and data[0][1]==data[1][1])):
-            l = Line(data[0],data[1])
+        if(not(data[i][0]==data[i+1][0] and data[i][1]==data[i+1][1])):
+            l = Line(data[i],data[i+1])
             lines.append(l)
     return lines
     
@@ -219,8 +233,8 @@ def main():
     T = 1
     for j in range(T):
         print('Test no: %d'%j)
-        #idx = random.sample(list(range(sze)),10)  
-        idx = list(range(sze))  
+        idx = random.sample(list(range(sze)),10)  
+        #idx = list(range(sze))  
         all_traj = []
         for i in idx:
             all_traj.append(traj_lst['000'][i])
@@ -228,7 +242,7 @@ def main():
             all_traj.append(traj_lst['001'][i])
         #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
-        D = getDist(Q,all_traj,method = 'paper1')
+        D = getDist(Q,all_traj,method = 'dtw')
         L = []
         for R in D[:4]:
             L.append(R[:4])

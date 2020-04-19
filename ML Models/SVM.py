@@ -28,8 +28,8 @@ def read_file(filename):
 def convertToLine(data):
     lines = []
     for i in range(len(data)-1):
-        if(not(data[0][0]==data[1][0] and data[0][1]==data[1][1])):
-            l = Line(data[0],data[1])
+        if(not(data[i][0]==data[i+1][0] and data[i][1]==data[i+1][1])):
+            l = Line(data[i],data[i+1])
             lines.append(l)
     return lines
 
