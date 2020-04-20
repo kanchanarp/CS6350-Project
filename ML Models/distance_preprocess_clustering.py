@@ -16,6 +16,7 @@ import random
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+import utm
 from Metrics.Line import Line
 from Metrics.Trajectory import Trajectory
 from Metrics.DistanceMetric import DistanceMetric
@@ -167,6 +168,11 @@ def main():
     print("Writing users")
     usrs = ['000']*len(traj_lst['000'])+['001']*len(traj_lst['001'])
     write_file("Users_GeolifeXY.csv",usrs)
+    
+    print("Euclid method")
+    all_traj = traj_lst['000'] + traj_lst['001']
+    D = getDist(Q,all_traj,method = 'euclid')
+    write_file("Euclid_GeolifeXY.csv",D)
     
     print("DTW method")
     all_traj = traj_lst['000'] + traj_lst['001']

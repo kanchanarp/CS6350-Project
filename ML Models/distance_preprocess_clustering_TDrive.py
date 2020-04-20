@@ -138,7 +138,7 @@ def main():
     #traj_lst = {'000':[] , '001':[]}
     all_traj = []
     for name in files:
-        dirpath = "TDriveBest/GPS/"+str(name)+"/*.csv"
+        dirpath = "TDriveBest/XY/"+str(name)+"/*.csv"
         dirlst = glob.glob(dirpath)
         trajectories = []
         lnths = []
@@ -157,7 +157,12 @@ def main():
             traj.append(trajectories[i])
         all_traj = all_traj+traj
     
-    Q = read_file("TDriveBest/best_points.csv")
+    Q_ = read_file("TDriveBest/best_points.csv")
+    Q = []
+    for q in Q_:
+        u1,u2,_,_ = utm.from_latlon(q[1],q[0])
+        Q.append(np.array([u1,u2]))
+    
     print("Total number of trajectories: %d"%len(all_traj))
     #sze = min(len(traj_lst['000']),len(traj_lst['001']))
     print("Writing Q")
