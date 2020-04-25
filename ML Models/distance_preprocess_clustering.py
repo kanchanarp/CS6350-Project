@@ -162,33 +162,33 @@ def main():
     sze = min(len(traj_lst['000']),len(traj_lst['001']))
     err_ = []
     T = 1
-    print("Writing Q")
-    write_file("Q_GeolifeXY.csv",Q)
+#    print("Writing Q")
+#    write_file("Q_GeolifeXY.csv",Q)
     
     print("Writing users")
-    usrs = ['000']*len(traj_lst['000'])+['001']*len(traj_lst['001'])
+    usrs = [['000']]*len(traj_lst['000'])+[['001']]*len(traj_lst['001'])
     write_file("Users_GeolifeXY.csv",usrs)
     
-    print("Euclid method")
-    all_traj = traj_lst['000'] + traj_lst['001']
-    D = getDist(Q,all_traj,method = 'euclid')
-    write_file("Euclid_GeolifeXY.csv",D)
-    
-    print("DTW method")
-    all_traj = traj_lst['000'] + traj_lst['001']
-    D = getDist(Q,all_traj,method = 'dtw')
-    write_file("DTW_GeolifeXY.csv",D)
-    
-    print("Frechet method")
-    all_traj = traj_lst['000'] + traj_lst['001']
-    D = getDist(Q,all_traj,method = 'frechet')
-    write_file("Frechet_GeolifeXY.csv",D)
-    
-    print("Paper method")
-    all_traj = traj_lst['000'] + traj_lst['001']
-    D1,D2 = getDistPapr(Q,all_traj)
-    write_file("Paper1_GeolifeXY.csv",D1)
-    write_file("Paper2_GeolifeXY.csv",D2)
+#    print("Euclid method")
+#    all_traj = traj_lst['000'] + traj_lst['001']
+#    D = getDist(Q,all_traj,method = 'euclid')
+#    write_file("Euclid_GeolifeXY.csv",D)
+#    
+#    print("DTW method")
+#    all_traj = traj_lst['000'] + traj_lst['001']
+#    D = getDist(Q,all_traj,method = 'dtw')
+#    write_file("DTW_GeolifeXY.csv",D)
+#    
+#    print("Frechet method")
+#    all_traj = traj_lst['000'] + traj_lst['001']
+#    D = getDist(Q,all_traj,method = 'frechet')
+#    write_file("Frechet_GeolifeXY.csv",D)
+#    
+#    print("Paper method")
+#    all_traj = traj_lst['000'] + traj_lst['001']
+#    D1,D2 = getDistPapr(Q,all_traj)
+#    write_file("Paper1_GeolifeXY.csv",D1)
+#    write_file("Paper2_GeolifeXY.csv",D2)
     
     
         

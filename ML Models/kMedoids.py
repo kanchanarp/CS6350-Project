@@ -13,16 +13,17 @@ from Metrics.Line import Line
 from Metrics.Trajectory import Trajectory
 from Metrics.DistanceMetric import DistanceMetric
 import similaritymeasures as sm
+from statistics import mode
 
-def read_file(filename):
+def read_file(filename,fnc):
     data = []
     count = 0
-    with open(filename,'r') as f:
+    with open(filename,'r',encoding = 'utf-8-sig') as f:
         for line in f:
             count = count + 1
-            if(count > 6):
+            if(count > 0):
                 terms = line.strip().split(',')
-                data.append(np.asarray(list(map(float,terms[:2]))))
+                data.append(np.asarray(list(map(fnc,terms))))
     return data
 
 def get_pts(t):
@@ -129,7 +130,7 @@ def calclateCostOpt(trajectories,centers,D):
         cost = cost + min_d
     return (cost,cluster_set)
 
-def kMedoidsOpt(Q,trajectories,k,t_max,D):
+def kMedoidsOpt(trajectories,k,t_max,D):
     centers =  random.sample(range(len(trajectories)), k)
     #D = np.array(getDist(Q,trajectories,method = 'paper2'))
     (cost,cluster_set) = calclateCostOpt(trajectories,centers,D)
@@ -154,37 +155,54 @@ def kMedoidsOpt(Q,trajectories,k,t_max,D):
         centers = bst_
     return centers
 
-def calcError(traj,traj_lst,lbls,cnt):
-    clbls = {}
-    lblvals = [-1,1]
-    for i in range(len(cnt)):
-        clbls[cnt[i]] = lblvals[i]
-    error = 0
-    for i in range(len(traj)):
-        if(traj[i] in traj_lst['000']):
-            obs = -1
-        else:
-            obs = 1
-        c = lbls[i]
-        pred = clbls[c]
-        error = error + (pred!=obs)
-    minerror = error
-    clbls = {}
-    lblvals = [1,-1]
-    for i in range(len(cnt)):
-        clbls[cnt[i]] = lblvals[i]
-    error = 0
-    for i in range(len(traj)):
-        if(traj[i] in traj_lst['000']):
-            obs = -1
-        else:
-            obs = 1
-        c = lbls[i]
-        pred = clbls[c]
-        error = error + (pred!=obs)
-    if(error<minerror):
-        minerror = error
-    return 1.0*minerror/len(traj)
+def calcError(traj,ids,lbls,cnt):
+    lblvals = list(set(lbls))
+    clstrs = {}
+    slctd = []
+    for l in lblvals:
+        clstrs[l] = []
+        for i in range(len(traj)):
+            if(lbls[i]==l):
+                clstrs[l].append(traj[i].get_user())
+    err = 0.0
+    for l in lblvals:
+        cls = clstrs[l]
+#        if(len(slctd)>0):
+#            for s in slctd:
+#                cls = list(filter((s).__ne__,cls))
+        usr = mode(cls)
+        err = err + 1.0*(len(clstrs[l])-cls.count(usr))
+    return err/len(traj)
+#    clbls = {}
+#    lblvals = [-1,1]
+#    for i in range(len(cnt)):
+#        clbls[cnt[i]] = lblvals[i]
+#    error = 0
+#    for i in range(len(traj)):
+#        if(traj[i] in traj_lst['000']):
+#            obs = -1
+#        else:
+#            obs = 1
+#        c = lbls[i]
+#        pred = clbls[c]
+#        error = error + (pred!=obs)
+#    minerror = error
+#    clbls = {}
+#    lblvals = [1,-1]
+#    for i in range(len(cnt)):
+#        clbls[cnt[i]] = lblvals[i]
+#    error = 0
+#    for i in range(len(traj)):
+#        if(traj[i] in traj_lst['000']):
+#            obs = -1
+#        else:
+#            obs = 1
+#        c = lbls[i]
+#        pred = clbls[c]
+#        error = error + (pred!=obs)
+#    if(error<minerror):
+#        minerror = error
+#    return 1.0*minerror/len(traj)
 
 def printDist(Q,trajectories):
     metric = DistanceMetric(Q)
@@ -195,6 +213,23 @@ def printDist(Q,trajectories):
                 d = metric.calc_trajectorydst(Q,trajectories[i],trajectories[j])[1]
                 if(d == float('inf')):
                     print("Traj: %d, %d"%(i,j))
+def sampleD(D,k):
+    N = np.size(D,0)
+    ids = random.sample(list(range(N)),k)
+    ids.sort()
+    D1 = np.array([np.array([0 for i in range(k)]) for j in range(k)])
+    for i in range(k):
+        for j in range(k):
+            D1[i][j] = D[ids[i]][ids[j]]
+    D2 = np.array([np.array([0 for i in range(N-k)]) for j in range(N-k)])
+    ids_lft = []
+    for i in range(N):
+        if(not(i in ids)):
+            ids_lft.append(i)
+    for i in range(N-k):
+        for j in range(N-k):
+            D2[i][j] = D[ids_lft[i]][ids_lft[j]]
+    return D1,ids,D2,ids_lft
 
 def main():
     random.seed(0)
@@ -206,10 +241,11 @@ def main():
         trajectories = []
         lnths = []
         for f in dirlst:
-            data = read_file(f)
+            data = read_file(f,float)
             lines = convertToLine(data)
             if(len(lines)>100):
                 t = Trajectory(lines)
+                t.set_user(name)
                 trajectories.append(t)
                 lnths.append(len(lines))
         lnths = np.asarray(lnths)
@@ -218,39 +254,45 @@ def main():
         for i in idx:
             traj.append(trajectories[i])
         traj_lst[name] = traj
-    Q = []
-    N = 10
-    while(len(Q)<N):
-        x = 39.0+2*random.random()
-        y = 115.0+2*random.random()
-        p = [x,y]
-        if(not(p in Q)):
-            Q.append(p)
-    for i in range(len(Q)):
-        Q[i] = np.asarray(Q[i])
-    sze = min(len(traj_lst['000']),len(traj_lst['001']))
+    all_traj = traj_lst['000'] + traj_lst['001']
+#    Q = []
+#    N = 10
+#    while(len(Q)<N):
+#        x = 39.0+2*random.random()
+#        y = 115.0+2*random.random()
+#        p = [x,y]
+#        if(not(p in Q)):
+#            Q.append(p)
+#    for i in range(len(Q)):
+#        Q[i] = np.asarray(Q[i])
+#    sze = min(len(traj_lst['000']),len(traj_lst['001']))
     err_ = []
     T = 1
+    usrs = read_file("Users_GeolifeXY.csv",str)
+    D = read_file("Paper1_GeolifeXY.csv",float)
+    D1,inds1,D2,inds = sampleD(D,4)
+    print(inds1)
+    print(D1)
     for j in range(T):
         print('Test no: %d'%j)
-        idx = random.sample(list(range(sze)),10)  
-        #idx = list(range(sze))  
-        all_traj = []
-        for i in idx:
-            all_traj.append(traj_lst['000'][i])
-        for i in idx:
-            all_traj.append(traj_lst['001'][i])
-        #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
+#        idx = random.sample(list(range(sze)),10)  
+#        #idx = list(range(sze))  
+#        all_traj = []
+#        for i in idx:
+#            all_traj.append(traj_lst['000'][i])
+#        for i in idx:
+#            all_traj.append(traj_lst['001'][i])
+#        #all_traj = traj_lst['000'][idx] + traj_lst['001'][idx]
         #printDist(Q,all_traj)
-        D = getDist(Q,all_traj,method = 'dtw')
-        L = []
-        for R in D[:4]:
-            L.append(R[:4])
-        print(L)
-        cnt = kMedoidsOpt(Q,all_traj,2,100,D)
+        #D = getDist(Q,all_traj,method = 'dtw')
+#        L = []
+#        for R in D[:4]:
+#            L.append(R[:4])
+#        print(L)
+        cnt = kMedoidsOpt(all_traj,2,100,D)
         cst = calclateCostOpt(all_traj,cnt,D)
         #print(len(cnt))
-        err = calcError(all_traj,traj_lst,cst[1],cnt)
+        err = calcError(all_traj,usrs,cst[1],cnt)
         print(err)
         err_.append(err)
     print(sum(err_)/T)
