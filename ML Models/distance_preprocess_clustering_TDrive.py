@@ -27,6 +27,7 @@ from Metrics.Line import Line
 from Metrics.Trajectory import Trajectory
 from Metrics.DistanceMetric import DistanceMetric
 import similaritymeasures as sm
+from pyproj import Proj, transform
 
 def read_file(filename):
     data = []
@@ -138,7 +139,7 @@ def main():
     #traj_lst = {'000':[] , '001':[]}
     all_traj = []
     for name in files:
-        dirpath = "TDriveBest/XY/"+str(name)+"/*.csv"
+        dirpath = "TDriveBest/XY_/"+str(name)+"/*.csv"
         dirlst = glob.glob(dirpath)
         trajectories = []
         lnths = []
@@ -156,42 +157,45 @@ def main():
         for i in idx:
             traj.append(trajectories[i])
         all_traj = all_traj+traj
-    
+    inProj = Proj(init='epsg:3857')
+    outProj = Proj(init='epsg:4326')
     Q_ = read_file("TDriveBest/best_points.csv")
     Q = []
     for q in Q_:
-        u1,u2,_,_ = utm.from_latlon(q[1],q[0])
+        u1,u2 = transform(outProj,inProj,q[0],q[1])
+        #u1,u2,_,_ = utm.from_latlon(q[1],q[0])
         Q.append(np.array([u1,u2]))
     
     print("Total number of trajectories: %d"%len(all_traj))
     #sze = min(len(traj_lst['000']),len(traj_lst['001']))
-    print("Writing Q")
-    write_file("Q_TDrive.csv",Q)
-    
-    print("Writing users")
-    usrs = [t.get_user() for t in all_traj]
-    write_file("Users_TDrive.csv",usrs)
-    
-    print("Euclid method")
-    #all_traj = traj_lst['000'] + traj_lst['001']
-    D = getDist(Q,all_traj,method = 'euclid')
-    write_file("Euclid_TDrive.csv",D)
+#    print("Writing Q")
+#    write_file("TDriveBest/XY_/Q_TDrive.csv",Q)
+#    
+#    print("Writing users")
+#    usrs = [t.get_user() for t in all_traj]
+#    write_file("TDriveBest/XY_/Users_TDrive.csv",usrs)
+#    
+#    print("Euclid method")
+#    #all_traj = traj_lst['000'] + traj_lst['001']
+#    D = getDist(Q,all_traj,method = 'euclid')
+#    write_file("TDriveBest/XY_/Euclid_TDrive.csv",D)
+#    
+#    print("Paper method")
+#    #all_traj = traj_lst['000'] + traj_lst['001']
+#    D1,D2 = getDistPapr(Q,all_traj)
+#    write_file("TDriveBest/XY_/Paper1_TDrive.csv",D1)
+#    write_file("TDriveBest/XY_/Paper2_TDrive.csv",D2)
     
     print("DTW method")
     #all_traj = traj_lst['000'] + traj_lst['001']
     D = getDist(Q,all_traj,method = 'dtw')
-    write_file("DTW_TDrive.csv",D)
+    write_file("TDriveBest/XY_/DTW_TDrive.csv",D)
     
     print("Frechet method")
     #all_traj = traj_lst['000'] + traj_lst['001']
     D = getDist(Q,all_traj,method = 'frechet')
-    write_file("Frechet_TDrive.csv",D)
+    write_file("TDriveBest/XY_/Frechet_TDrive.csv",D)
     
-    print("Paper method")
-    #all_traj = traj_lst['000'] + traj_lst['001']
-    D1,D2 = getDistPapr(Q,all_traj)
-    write_file("Paper1_TDrive.csv",D1)
-    write_file("Paper2_TDrive.csv",D2)
     
     
         

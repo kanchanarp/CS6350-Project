@@ -9,11 +9,12 @@ import random
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from io import open
 from Metrics.Line import Line
 from Metrics.Trajectory import Trajectory
 from Metrics.DistanceMetric import DistanceMetric
-import similaritymeasures as sm
-from statistics import mode
+##import similaritymeasures as sm
+##from statistics import mode
 
 def read_file(filename,fnc):
     data = []
@@ -32,37 +33,46 @@ def get_pts(t):
     for l in lines:
         pts.append(l.get_en())
     return pts
-    
-def getDist(Q,trajectories,method = 'euclid'):
-    metric = DistanceMetric(Q)
-    N = len(trajectories)
-    D = [[0 for i in range(N)] for j in range(N)]
-    for i in range(N):
-        for j in range(N):
-            print("(%d , %d)"%(i,j))
-            if(i!=j):
-                if(method=='paper1'):
-                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[1]
-                if(method=='paper2'):
-                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[0]
-                if(method=='euclid'):
-                    d = metric.calc_euclideandst(trajectories[i],trajectories[j])
-                if(method == 'dtw'):
-                    pts1 = get_pts(trajectories[i])
-                    pts2 = get_pts(trajectories[j])
-                    d,_ = sm.dtw(pts1,pts2)
-                    #d = metric.calc_dtwdistance(trajectories[i],trajectories[j])
-                if(method=='frechet'):
-                    pts1 = get_pts(trajectories[i])
-                    pts2 = get_pts(trajectories[j])
-                    d = sm.frechet_dist(pts1,pts2)
-                    #d = metric.calc_fretchetdistance(trajectories[i],trajectories[j])
-                if(d == float('inf')):
-                    print("Traj: %d, %d"%(i,j))
-                D[i][j] = d
-            else:
-                D[i][j] = 0
-    return D
+
+def get_mode(Y):
+    S = list(set(Y))
+    best = S[0]
+    best_cont = 1
+    for s in S:
+        if(S.count(s)>best_cont):
+            best = s
+            best_cnt = S.count(s)
+    return best
+##def getDist(Q,trajectories,method = 'euclid'):
+##    metric = DistanceMetric(Q)
+##    N = len(trajectories)
+##    D = [[0 for i in range(N)] for j in range(N)]
+##    for i in range(N):
+##        for j in range(N):
+##            print("(%d , %d)"%(i,j))
+##            if(i!=j):
+##                if(method=='paper1'):
+##                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[1]
+##                if(method=='paper2'):
+##                    d = metric.calc_trajectorydst_opt(Q,trajectories[i],trajectories[j])[0]
+##                if(method=='euclid'):
+##                    d = metric.calc_euclideandst(trajectories[i],trajectories[j])
+##                if(method == 'dtw'):
+##                    pts1 = get_pts(trajectories[i])
+##                    pts2 = get_pts(trajectories[j])
+##                    d,_ = sm.dtw(pts1,pts2)
+##                    #d = metric.calc_dtwdistance(trajectories[i],trajectories[j])
+##                if(method=='frechet'):
+##                    pts1 = get_pts(trajectories[i])
+##                    pts2 = get_pts(trajectories[j])
+##                    d = sm.frechet_dist(pts1,pts2)
+##                    #d = metric.calc_fretchetdistance(trajectories[i],trajectories[j])
+##                if(d == float('inf')):
+##                    print("Traj: %d, %d"%(i,j))
+##                D[i][j] = d
+##            else:
+##                D[i][j] = 0
+##    return D
 
 def convertToLine(data):
     lines = []
@@ -170,7 +180,7 @@ def calcError(traj,ids,lbls,cnt):
 #        if(len(slctd)>0):
 #            for s in slctd:
 #                cls = list(filter((s).__ne__,cls))
-        usr = mode(cls)
+        usr = get_mode(cls)
         err = err + 1.0*(len(clstrs[l])-cls.count(usr))
     return err/len(traj)
 #    clbls = {}
@@ -231,12 +241,21 @@ def sampleD(D,k):
             D2[i][j] = D[ids_lft[i]][ids_lft[j]]
     return D1,ids,D2,ids_lft
 
+def variance(X):
+    N = len(X)
+    mu = 1.0*sum(X)/N
+    var = 0.0
+    for x in X:
+        var = var + (1.0/N)*(x-mu)**2
+    return var
+
 def main():
-    random.seed(0)
-    files = ['000','001']
+    #random.seed(0)
+    files = ['0','1','2','3','4','5','6','7','8','9']
     traj_lst = {'000':[] , '001':[]}
+    all_traj = []
     for name in files:
-        dirpath = "ExtractedData/"+name+"/CSVOrig/*.csv"
+        dirpath = "TDriveBest/XY/"+name+"/*.csv"
         dirlst = glob.glob(dirpath)
         trajectories = []
         lnths = []
@@ -253,8 +272,8 @@ def main():
         traj = []
         for i in idx:
             traj.append(trajectories[i])
-        traj_lst[name] = traj
-    all_traj = traj_lst['000'] + traj_lst['001']
+        all_traj= all_traj+traj
+    #all_traj = traj_lst['000'] + traj_lst['001']
 #    Q = []
 #    N = 10
 #    while(len(Q)<N):
@@ -267,14 +286,22 @@ def main():
 #        Q[i] = np.asarray(Q[i])
 #    sze = min(len(traj_lst['000']),len(traj_lst['001']))
     err_ = []
-    T = 1
-    usrs = read_file("Users_GeolifeXY.csv",str)
-    D = read_file("Paper1_GeolifeXY.csv",float)
+    print(len(all_traj))
+    T = 10
+    usrs = read_file("Users_TDrive.csv",str)
+    D = read_file("Frechet_TDrive.csv",float)
     D1,inds1,D2,inds = sampleD(D,4)
     print(inds1)
     print(D1)
     for j in range(T):
         print('Test no: %d'%j)
+        D1,inds1,D2,inds = sampleD(D,50)
+        trajs = []
+        usrs_ = []
+        for i in inds1:
+            #print(i)
+            trajs.append(all_traj[i])
+            usrs_.append(usrs[i])
 #        idx = random.sample(list(range(sze)),10)  
 #        #idx = list(range(sze))  
 #        all_traj = []
@@ -289,13 +316,14 @@ def main():
 #        for R in D[:4]:
 #            L.append(R[:4])
 #        print(L)
-        cnt = kMedoidsOpt(all_traj,2,100,D)
-        cst = calclateCostOpt(all_traj,cnt,D)
+        cnt = kMedoidsOpt(trajs,2,100,D1)
+        cst = calclateCostOpt(trajs,cnt,D1)
         #print(len(cnt))
-        err = calcError(all_traj,usrs,cst[1],cnt)
+        err = calcError(trajs,usrs_,cst[1],cnt)
         print(err)
         err_.append(err)
     print(sum(err_)/T)
+    print(variance(err_))
     print(min(err_))
     print(max(err_))
     err_.sort()

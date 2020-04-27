@@ -102,14 +102,24 @@ def getY(usrs,inds):
 def toRBF(D,gamma=1):
     M = np.size(D,1)
     N = np.size(D,0)
-    K = np.array([np.array([1 for j in range(M)]) for i in range(N)])
+    K = np.array([np.array([1.0 for j in range(M)]) for i in range(N)])
     for i in range(N):
         for j in range(M):
-            K[i][j] = math.exp(-1*gamma*D[i][j])
+            v = -1*gamma*(D[i][j])**2
+            #print(math.exp(v))
+            K[i][j] = math.exp(v)
     return K
+
+def variance(X):
+    N = len(X)
+    mu = 1.0*sum(X)/N
+    var = 0.0
+    for x in X:
+        var = var + (1.0/N)*(x-mu)**2
+    return var
     
 def main():
-    random.seed(0)
+    #random.seed(0)
 #    files = ['000','001']
 #    traj_lst = {'000':[] , '001':[]}
 #    for name in files:
@@ -142,18 +152,20 @@ def main():
 #        Q[i] = np.asarray(Q[i])
 #    sze = min(len(traj_lst['000']),len(traj_lst['001']))
     err_ = []
-
-    T = 10
-    usrs = read_file("Users_GeolifeXY.csv",str)
-    D = read_file("Euclid_GeolifeXY.csv",float)
-    D = toRBF(D)
+    err__=[]
+    T = 100
+    usrs = read_file("Users_TDrive.csv",str)
+    D = read_file("Frechet_TDrive.csv",float)
+    print(np.amax(D))
+    D = toRBF(D,gamma = 5e-17)
+    print(D)
     for j in range(T):
-        print('Test no: %d'%j)
-        D1,inds1,D2,inds2,D3,indtst = sampleD(D,180)
+        #print('Test no: %d'%j)
+        D1,inds1,D2,inds2,D3,indtst = sampleD(D,50)
         
         Y = getY(usrs,inds1)#[0 for i in range(M)]+[1 for i in range(M)]
         #np.array(getDist(Q,all_traj,method = 'paper2'))
-        clf = svm.SVC(kernel = 'precomputed')
+        clf = svm.SVC(C=10,tol=1e-1, kernel = 'precomputed')
         clf.fit(D1,Y)
         #pred = clf.predict(D)
         #err = calcError(Y,pred)
@@ -166,13 +178,15 @@ def main():
          #np.array(getDist(Q,all_traj,method = 'paper2'))
         
         pred = clf.predict(D1)
-        err = calcError(Y,pred)
+        err = clf.score(D1,Y)#calcError(Y,pred)
+        err_.append(err)
         Y = getY(usrs,indtst)
         err2 = clf.score(D3,Y)
-        print(err)
-        print(err2)
-        err_.append(err)
+        #print(err)
+        #print(err2)
+        err__.append(err2)
     print(sum(err_)/T)
+    print(variance(err_))
     print(min(err_))
     print(max(err_))
     err_.sort()
@@ -186,6 +200,23 @@ def main():
         elif(err_.count(e)==l):
             modes.append(e)
     print(set(modes))
+
+    print(sum(err__)/T)
+    print(variance(err__))
+    print(min(err__))
+    print(max(err__))
+    err_.sort()
+    print((err__[T//2-1]+err__[T//2])/2)
+    modes = []
+    l = 0
+    for e in err__:
+        if(err__.count(e)>l):
+            modes = [e]
+            l = err__.count(e)
+        elif(err__.count(e)==l):
+            modes.append(e)
+    print(set(modes))
+    
     
     
 if __name__=="__main__":main()
