@@ -154,8 +154,8 @@ def main():
     err_ = []
     err__=[]
     T = 100
-    usrs = read_file("Users_TDrive.csv",str)
-    D = read_file("Frechet_TDrive.csv",float)
+    usrs = read_file("TDriveBest\XY_\Users_TDrive.csv",str)
+    D = read_file("TDriveBest\XY_\Frechet_TDrive.csv",float)
     print(np.amax(D))
     D = toRBF(D,gamma = 5e-17)
     print(D)
